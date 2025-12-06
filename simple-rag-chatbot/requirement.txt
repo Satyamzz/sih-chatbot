@@ -1,0 +1,9 @@
+chainlit
+groq
+langchain-community
+langchain-core
+langchain-text-splitters
+faiss-cpu
+python-dotenv
+pydf
+pypdf
