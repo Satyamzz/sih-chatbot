@@ -1,10 +1,6 @@
 chainlit
 groq
-langchain-community
-langchain-core
-langchain-text-splitters
-faiss-cpu
+pinecone-client
+sentence-transformers
 python-dotenv
-pydf
-pypdf
-pinecone
+requests
