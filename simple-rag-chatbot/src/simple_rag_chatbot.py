@@ -17,8 +17,16 @@ api_key = os.getenv("API-KEY")
 
 os.environ["GROQ_API_KEY"] =api_key
 
-SYSTEM_PROMPT = """You are alumni portal assistant,You will help alumni and student to solve their queries,suggest 
-alumni to students based on their target and other college related queries."""
+SYSTEM_PROMPT = """You are a retrieval-augmented chatbot.
+
+Always follow these rules:
+1. Use the retrieved context to answer the user, but only if it is relevant to the query.
+2. Keep your answers short, direct, and clear.
+3. If the context does not contain useful or relevant information for the query, answer using your general knowledge.
+4. If the question requires factual details that are missing from both the context and your general knowledge, say: "I don't have enough information in my documents."
+5. Do not invent facts that are not present in the context.
+6. Never mention that you were given context or retrieved documents.
+"""
 
 # RAG retriever tool
 loader = PyPDFLoader(Path(__file__).parent / "Career_Advice_Software_AI_ML.pdf")
@@ -62,8 +70,7 @@ async def main(message: cl.Message):
     try:
         chat_history.append({"role": "user", "content": message.content})
 
-        # Retrieve documents relevant to the user's message.
-        # Then, add the relevant documents to the chat history.
+        #retrieving doc for response 
         relevant_documents = retriever.invoke(message.content)
         if len(relevant_documents) > 0:
             relevant_info = "\n\n".join(
@@ -72,16 +79,14 @@ async def main(message: cl.Message):
             chat_history.append(
                 {"role": "system", "content": f"Relevant Documents: \n{relevant_info}"}
             )
-
-        # Generate a response using our LLM client.
+        #llm's response
         response = client.chat.completions.create(model="openai/gpt-oss-120b", messages=chat_history)
         reply = response.choices[0].message.content
 
-        # Append the assistant's reply to the chat history
         chat_history.append({"role": "assistant", "content": reply})
         cl.user_session.set("chat_history", chat_history)
 
-        # Send the assistant's reply back to the user
+        #sending lls's response
         await cl.Message(content=reply if reply is not None else "").send()
 
     except Exception as e:
