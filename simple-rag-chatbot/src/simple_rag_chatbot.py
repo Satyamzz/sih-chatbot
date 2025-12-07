@@ -1,23 +1,18 @@
 import os
-from getpass import getpass
-from pathlib import Path
-
+from dotenv import load_dotenv
 import chainlit as cl
 from groq import Groq
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_community.vectorstores import FAISS
-from langchain_core.vectorstores import VectorStoreRetriever
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from dotenv import load_dotenv
+from pinecone import Pinecone
+from sentence_transformers import SentenceTransformer
+
 load_dotenv()
-import os
-api_key = os.getenv("API-KEY")
 
+# Environment variables
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+INDEX_NAME = os.getenv("INDEX_NAME", "mongo-sync-index")
 
-os.environ["GROQ_API_KEY"] =api_key
-
-SYSTEM_PROMPT = """You are a retrieval-augmented chatbot.
+SYSTEM_PROMPT = """You are a retrieval-augmented chatbot for alumni information.
 
 Always follow these rules:
 1. Use the retrieved context to answer the user, but only if it is relevant to the query.
@@ -28,33 +23,44 @@ Always follow these rules:
 6. Never mention that you were given context or retrieved documents.
 """
 
-# RAG retriever tool
-loader = PyPDFLoader(Path(__file__).parent / "Career_Advice_Software_AI_ML.pdf")
-pages = loader.load_and_split()
-documents = RecursiveCharacterTextSplitter(
-    chunk_size=1000, chunk_overlap=200
-).split_documents(pages)
-print("Indexing documents...")
-vector = FAISS.from_documents(documents, HuggingFaceEmbeddings())
-print("done!")
-retriever = vector.as_retriever()
+# Initialize Pinecone and model
+print("Initializing Pinecone and embedding model...")
+pc = Pinecone(api_key=PINECONE_API_KEY)
+index = pc.Index(INDEX_NAME)
+embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+print("Done!")
+
+
+def retrieve_from_pinecone(query: str, top_k: int = 3):
+    """Retrieve relevant documents from Pinecone"""
+    query_vector = embedding_model.encode(query).tolist()
+    results = index.query(
+        vector=query_vector,
+        top_k=top_k,
+        include_metadata=True
+    )
+    
+    relevant_docs = []
+    for match in results['matches']:
+        if match['score'] > 0.5: 
+            relevant_docs.append(match['metadata'].get('text', ''))
+    
+    return relevant_docs
 
 
 @cl.on_chat_start
 async def on_chat_start():
     # LLM client
-    client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+    client = Groq(api_key=GROQ_API_KEY)
     cl.user_session.set("client", client)
 
     # Chat history
     chat_history = [{"role": "system", "content": SYSTEM_PROMPT}]
     cl.user_session.set("chat_history", chat_history)
 
-    cl.user_session.set("retriever", retriever)
-
     welcome_message = (
-        "Welcome!"
-        " How may I assist you?"
+        "Welcome to the Alumni Information Chatbot! "
+        "How may I assist you?"
     )
 
     chat_history.append({"role": "assistant", "content": welcome_message})
@@ -65,36 +71,36 @@ async def on_chat_start():
 async def main(message: cl.Message):
     client: Groq = cl.user_session.get("client")
     chat_history: list = cl.user_session.get("chat_history")
-    retriever: VectorStoreRetriever = cl.user_session.get("retriever")
 
     try:
         chat_history.append({"role": "user", "content": message.content})
 
-        #retrieving doc for response 
-        relevant_documents = retriever.invoke(message.content)
+        # Retrieve relevant documents from Pinecone
+        relevant_documents = retrieve_from_pinecone(message.content, top_k=3)
+        
         if len(relevant_documents) > 0:
-            relevant_info = "\n\n".join(
-                map(lambda doc: doc.page_content, relevant_documents)
-            )
+            relevant_info = "\n\n".join(relevant_documents)
             chat_history.append(
                 {"role": "system", "content": f"Relevant Documents: \n{relevant_info}"}
             )
-        #llm's response
-        response = client.chat.completions.create(model="openai/gpt-oss-120b", messages=chat_history)
+
+        # Get LLM's response
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=chat_history
+        )
         reply = response.choices[0].message.content
 
         chat_history.append({"role": "assistant", "content": reply})
         cl.user_session.set("chat_history", chat_history)
 
-        #sending lls's response
+        # Send LLM's response
         await cl.Message(content=reply if reply is not None else "").send()
 
     except Exception as e:
-        # Handle any exceptions that occur during the API request
         await cl.Message(content=f"An error occurred: {str(e)}").send()
 
 
 @cl.on_stop
 async def on_stop():
-    # Clear the chat history when the session ends
     cl.user_session.set("chat_history", [])
