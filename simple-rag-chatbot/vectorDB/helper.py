@@ -1,31 +1,37 @@
 import os
 import requests
-from pinecone import Pinecone
-from sentence_transformers import SentenceTransformer
+from huggingface_hub import InferenceClient
 from dotenv import load_dotenv
+# --- MISSING IMPORT ADDED HERE ---
+from pinecone import Pinecone 
 
-# Load environment variables
 load_dotenv()
 
-# --- CONFIGURATION ---
+# 1. Setup Hugging Face
+hf_token = os.getenv("HF_TOKEN")
+hf_client = InferenceClient(model="sentence-transformers/all-MiniLM-L6-v2", token=hf_token)
+
+# 2. Setup Pinecone (THIS WAS MISSING)
+pinecone_api_key = os.getenv("PINECONE_API_KEY")
+index_name = os.getenv("INDEX_NAME", "mongo-sync-index")
+
+if not pinecone_api_key:
+    print("Error: PINECONE_API_KEY not found in .env")
+    exit()
+
+# Initialize the client and the index
+pc = Pinecone(api_key=pinecone_api_key)
+index = pc.Index(index_name) # <--- This defines the 'index' variable you were missing!
+
+print(f"Using INDEX_NAME: {index_name}")
+
+# 3. Setup API
 API_URL = os.getenv("API_URL", "https://sih-2025-user.onrender.com/api/v1/alumni/all")
-API_KEY = os.getenv("API_KEY")
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-INDEX_NAME = os.getenv("INDEX_NAME", "mongo-sync-index")
-
-# Debug: Print to verify
-print(f"Using INDEX_NAME: {INDEX_NAME}")
-
 ID_FIELD = "_id"
 
-# --- INITIALIZATION ---
 print("Initializing...")
+model = hf_client
 
-pc = Pinecone(api_key=PINECONE_API_KEY)
-index = pc.Index(INDEX_NAME)
-model = SentenceTransformer('all-MiniLM-L6-v2')
-
-# --- FETCH DATA FROM API ---
 print(f"Fetching data from {API_URL}...")
 
 try:
@@ -40,7 +46,6 @@ try:
     
     data = response.json()
     
-    # Handle nested response structure
     if isinstance(data, dict) and 'data' in data:
         data = data['data']
     
@@ -58,14 +63,11 @@ counter = 0
 print("Starting vectorization...")
 
 for item in data:
-    # Create text from available fields
     text_parts = [
         f"Name: {item.get('name', '')}",
         f"Email: {item.get('email', '')}",
         f"User Type: {item.get('userType', '')}"
     ]
-    
-    # Add profile details if available
     if 'profileDetails' in item and item['profileDetails']:
         profile = item['profileDetails']
         if 'graduationYear' in profile:
@@ -76,10 +78,17 @@ for item in data:
     text_content = " | ".join(text_parts)
     
     if text_content.strip():
-        vector = model.encode(text_content).tolist()
+        # --- CRITICAL FIX: Flatten the vector ---
+        # feature_extraction often returns [[0.1, 0.2...]]. Pinecone needs [0.1, 0.2...]
+        vector_response = model.feature_extraction(text_content).tolist()
         
+        # If the response is a nested list (e.g. [[...]]), grab the first element
+        if isinstance(vector_response[0], list):
+             vector = vector_response[0]
+        else:
+             vector = vector_response
+
         record_id = str(item.get(ID_FIELD, "unknown_id"))
-        
         record = {
             "id": record_id,
             "values": vector,
