@@ -1,6 +1,7 @@
 chainlit
 groq
 pinecone
-sentence-transformers
 python-dotenv
 requests
+huggingface_hub
+numpy

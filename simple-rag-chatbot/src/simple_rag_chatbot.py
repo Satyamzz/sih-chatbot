@@ -3,9 +3,13 @@ from dotenv import load_dotenv
 import chainlit as cl
 from groq import Groq
 from pinecone import Pinecone
-from sentence_transformers import SentenceTransformer
-
+from huggingface_hub import InferenceClient
 load_dotenv()
+
+hf_token=os.getenv("HF_TOKEN")
+
+client = InferenceClient(model="sentence-transformers/all-MiniLM-L6-v2", token=hf_token)
+
 
 # Environment variables
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -27,13 +31,13 @@ Always follow these rules:
 print("Initializing Pinecone and embedding model...")
 pc = Pinecone(api_key=PINECONE_API_KEY)
 index = pc.Index(INDEX_NAME)
-embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+embedding_model = client
 print("Done!")
 
 
 def retrieve_from_pinecone(query: str, top_k: int = 3):
     """Retrieve relevant documents from Pinecone"""
-    query_vector = embedding_model.encode(query).tolist()
+    query_vector = embedding_model.feature_extraction(query).tolist()
     results = index.query(
         vector=query_vector,
         top_k=top_k,
