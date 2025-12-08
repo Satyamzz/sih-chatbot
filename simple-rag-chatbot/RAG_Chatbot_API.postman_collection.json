@@ -1,0 +1,313 @@
+{
+  "info": {
+    "_postman_id": "rag-chatbot-collection",
+    "name": "RAG Chatbot - Alumni Information",
+    "description": "Postman collection for Alumni Information RAG Chatbot API endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Chatbot Endpoints",
+      "item": [
+        {
+          "name": "Get Chat",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8000/chat",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["chat"]
+            },
+            "description": "Get chat interface (Chainlit web interface)"
+          },
+          "response": []
+        },
+        {
+          "name": "Send Chat Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Tell me about alumni with Python skills\",\n  \"session_id\": \"user-session-123\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/chat",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "chat"]
+            },
+            "description": "Send a message to the chatbot and get a response with context from Pinecone"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Vector Database - Alumni API",
+      "item": [
+        {
+          "name": "Fetch All Alumni Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-analytics-api-key",
+                "value": "AnalyticsTopSecret"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "https://sih-2025-user.onrender.com/api/v1/alumni/all",
+              "protocol": "https",
+              "host": ["sih-2025-user", "onrender", "com"],
+              "path": ["api", "v1", "alumni", "all"]
+            },
+            "description": "Fetch all alumni data from the external API for vectorization"
+          },
+          "response": []
+        },
+        {
+          "name": "Search Alumni by Name",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-analytics-api-key",
+                "value": "AnalyticsTopSecret"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "https://sih-2025-user.onrender.com/api/v1/alumni/search?name=John",
+              "protocol": "https",
+              "host": ["sih-2025-user", "onrender", "com"],
+              "path": ["api", "v1", "alumni", "search"],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "John"
+                }
+              ]
+            },
+            "description": "Search for alumni by name"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Pinecone Vector Database",
+      "item": [
+        {
+          "name": "Query Pinecone Index",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Api-Key",
+                "value": "{{PINECONE_API_KEY}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vector\": [0.1, 0.2, 0.3, ...],\n  \"topK\": 3,\n  \"includeMetadata\": true\n}"
+            },
+            "url": {
+              "raw": "https://mongo-sync-index-XXXXX.svc.pinecone.io/query",
+              "protocol": "https",
+              "host": ["mongo-sync-index-XXXXX", "svc", "pinecone", "io"],
+              "path": ["query"]
+            },
+            "description": "Query the Pinecone vector database index for similar alumni"
+          },
+          "response": []
+        },
+        {
+          "name": "Upsert Vectors to Pinecone",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Api-Key",
+                "value": "{{PINECONE_API_KEY}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vectors\": [\n    {\n      \"id\": \"alumni-001\",\n      \"values\": [0.1, 0.2, 0.3, ...],\n      \"metadata\": {\n        \"text\": \"Name: John Doe | Email: john@example.com | User Type: Alumni | Graduation Year: 2020 | Skills: Python, Java\",\n        \"source_api\": \"mongo_api\"\n      }\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "https://mongo-sync-index-XXXXX.svc.pinecone.io/vectors/upsert",
+              "protocol": "https",
+              "host": ["mongo-sync-index-XXXXX", "svc", "pinecone", "io"],
+              "path": ["vectors", "upsert"]
+            },
+            "description": "Upsert (insert or update) vectors into the Pinecone index"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Index Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Api-Key",
+                "value": "{{PINECONE_API_KEY}}"
+              }
+            ],
+            "url": {
+              "raw": "https://mongo-sync-index-XXXXX.svc.pinecone.io/describe_index_stats",
+              "protocol": "https",
+              "host": ["mongo-sync-index-XXXXX", "svc", "pinecone", "io"],
+              "path": ["describe_index_stats"]
+            },
+            "description": "Get statistics about the Pinecone index (vector count, dimension, etc.)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Groq LLM API",
+      "item": [
+        {
+          "name": "Generate Chat Completion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{GROQ_API_KEY}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a helpful assistant for alumni information.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Tell me about alumni with Python skills\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 1024\n}"
+            },
+            "url": {
+              "raw": "https://api.groq.com/openai/v1/chat/completions",
+              "protocol": "https",
+              "host": ["api", "groq", "com"],
+              "path": ["openai", "v1", "chat", "completions"]
+            },
+            "description": "Generate a chat completion using Groq's Llama model"
+          },
+          "response": []
+        },
+        {
+          "name": "Test Groq Connection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{GROQ_API_KEY}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"model\": \"mixtral-8x7b-32768\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Hello! Are you working?\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "https://api.groq.com/openai/v1/chat/completions",
+              "protocol": "https",
+              "host": ["api", "groq", "com"],
+              "path": ["openai", "v1", "chat", "completions"]
+            },
+            "description": "Test the Groq API connection with a simple message"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Environment Setup",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/health",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["health"]
+            },
+            "description": "Check if the chatbot service is running"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "GROQ_API_KEY",
+      "value": "",
+      "type": "string",
+      "description": "Your Groq API key from https://console.groq.com/keys"
+    },
+    {
+      "key": "PINECONE_API_KEY",
+      "value": "",
+      "type": "string",
+      "description": "Your Pinecone API key from https://app.pinecone.io"
+    },
+    {
+      "key": "BASE_URL",
+      "value": "http://localhost:8000",
+      "type": "string",
+      "description": "Base URL for the chatbot service"
+    },
+    {
+      "key": "API_KEY",
+      "value": "",
+      "type": "string",
+      "description": "API key for external alumni API"
+    }
+  ]
+}

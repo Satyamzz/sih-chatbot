@@ -16,7 +16,7 @@ SYSTEM_PROMPT = """You are a retrieval-augmented chatbot for alumni information.
 
 Always follow these rules:
 1. Use the retrieved context to answer the user, but only if it is relevant to the query.
-2. Keep your answers short, direct, and clear.
+2. Keep your answers short, direct, and clear .
 3. If the context does not contain useful or relevant information for the query, answer using your general knowledge.
 4. If the question requires factual details that are missing from both the context and your general knowledge, say: "I don't have enough information in my documents."
 5. Do not invent facts that are not present in the context.
@@ -42,7 +42,7 @@ def retrieve_from_pinecone(query: str, top_k: int = 3):
     
     relevant_docs = []
     for match in results['matches']:
-        if match['score'] > 0.5: 
+        if match['score'] > 0.3: 
             relevant_docs.append(match['metadata'].get('text', ''))
     
     return relevant_docs
