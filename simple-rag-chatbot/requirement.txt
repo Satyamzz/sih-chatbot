@@ -1,6 +1,6 @@
 chainlit
 groq
-pinecone-client
+pinecone
 sentence-transformers
 python-dotenv
 requests
