@@ -79,7 +79,7 @@ async def main(message: cl.Message):
         chat_history.append({"role": "user", "content": message.content})
 
         # Run retrieval in a separate thread so it doesn't block the UI
-        relevant_documents = await cl.make_async(retrieve_from_pinecone)(message.content, top_k=3)
+        relevant_documents = await cl.make_async(retrieve_from_pinecone)(message.content, top_k=47)
         
         if relevant_documents:
             relevant_info = "\n\n".join(relevant_documents)
