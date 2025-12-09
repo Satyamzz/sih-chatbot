@@ -29,7 +29,7 @@ pc = Pinecone(api_key=PINECONE_API_KEY)
 index = pc.Index(INDEX_NAME)
 print("Done!")
 
-def retrieve_from_pinecone(query: str, top_k: int = 3):
+def retrieve_from_pinecone(query: str, top_k: int = 47):
     """Retrieve relevant documents from Pinecone"""
     # 1. Generate Embedding
     response = hf_client.feature_extraction(query)
